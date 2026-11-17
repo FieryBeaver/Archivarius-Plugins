@@ -1,0 +1,23 @@
+{
+  "name": "Archivarius Plugins",
+  "description": "Community plugin registry for Archivarius. All plugins are free.",
+  "homepage": "https://github.com/FieryBeaver/Archivarius-Plugins",
+  "plugins": [
+    {
+      "slug": "daggerheart-sheet",
+      "name": "Daggerheart Sheet",
+      "version": "1.0.0",
+      "author": "FieryBeaver",
+      "blurb": "A full Daggerheart SRD 2.0 player sheet: traits, tracks, downtime guides, weapons, heritage/class and domain cards with trackers, drag-reorder and resize.",
+      "tags": [
+        "ttrpg",
+        "daggerheart",
+        "character-sheet"
+      ],
+      "license": "DPCGL content / MIT code",
+      "file": "plugins/daggerheart-sheet/plugin.html",
+      "bytes": 174437,
+      "icon": "gi:GiDaggers"
+    }
+  ]
+}
