@@ -27,6 +27,7 @@ data limits are in the **[author guide](https://github.com/FieryBeaver/Archivari
 | Plugin | Description | License |
 |---|---|---|
 | [Daggerheart Sheet](plugins/daggerheart-sheet) | A full Daggerheart SRD 2.0 player sheet: traits, tracks, downtime guides, weapons, heritage/class and domain cards with trackers, drag-reorder and resize. | DPCGL content / MIT code |
+| [Tracker](plugins/tracker) | Configurable quantity trackers (gold, arrows, rations, mana, luck…) with step, optional max, color and icon. | MIT |
 
 ## Installing a plugin
 

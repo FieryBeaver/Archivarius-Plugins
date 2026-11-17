@@ -18,6 +18,22 @@
       "file": "plugins/daggerheart-sheet/plugin.html",
       "bytes": 174437,
       "icon": "gi:GiDaggers"
+    },
+    {
+      "slug": "tracker",
+      "name": "Tracker",
+      "version": "1.0.0",
+      "author": "FieryBeaver",
+      "blurb": "Count anything with configurable trackers: gold, arrows, rations, mana or party luck, each with its own step, optional max, color and icon.",
+      "tags": [
+        "tracker",
+        "utility",
+        "counter"
+      ],
+      "license": "MIT",
+      "file": "plugins/tracker/plugin.html",
+      "bytes": 24653,
+      "icon": "gi:GiCoins"
     }
   ]
 }

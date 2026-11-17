@@ -1,0 +1,434 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!--
+  Tracker — an Archivarius plugin. Count anything: gold, arrows, rations,
+  mana, party luck. Each tracker has a name, value, optional max, step,
+  color and icon. Icons are original drawings. License: MIT.
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { font: 13px/1.45 system-ui, sans-serif; color: var(--text, #e7e4dc); padding: 10px; }
+  .wrap { display: grid; gap: 8px; background: var(--panel, #1d2026);
+    border: 1px solid var(--border, #2e323b); border-radius: 10px; padding: 12px; }
+  input { font: inherit; color: inherit; background: var(--bg, #16181d);
+    border: 1px solid var(--border, #2e323b); border-radius: 6px; padding: 4px 8px; width: 100%; min-width: 0; }
+  input:focus { outline: none; border-color: var(--accent, #d4a953); }
+  input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  button { font: inherit; cursor: pointer; color: var(--accent, #d4a953); background: transparent;
+    border: 1px solid var(--border, #2e323b); border-radius: 6px; padding: 2px 9px; }
+  button:hover { border-color: var(--accent, #d4a953); }
+  button:disabled { opacity: .35; cursor: default; }
+  button:disabled:hover { border-color: var(--border, #2e323b); }
+  svg { display: block; }
+
+  .list { display: grid; gap: 8px; }
+  .empty { color: var(--muted, #9a958a); font-size: 12px; text-align: center; padding: 6px 0; }
+
+  .tr { --c: #d4a953; background: var(--panel-2, #23262e); border-radius: 10px; padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--c) 22%, var(--border, #2e323b)); border-left: 3px solid var(--c); }
+  .tr.editing { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent); }
+  .row { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+  .ico { flex-shrink: 0; width: 38px; height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); }
+  .ico svg { width: 26px; height: 26px; }
+  .nm { flex: 1 1 100px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+  .nm input, .nm .txt { font-size: 14px; font-weight: 600; padding: 2px 4px; background: transparent; border-color: transparent;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nm input:hover { border-color: var(--border, #2e323b); }
+  .nm input:focus { border-color: var(--c); background: var(--bg, #16181d); }
+  .nm .sub { font-size: 10.5px; color: var(--muted, #9a958a); padding: 0 5px; text-transform: uppercase; letter-spacing: .07em; white-space: nowrap; }
+  .cnt { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; }
+  .pm { width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 17px; line-height: 1; color: var(--c);
+    border-color: color-mix(in srgb, var(--c) 35%, var(--border, #2e323b)); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .pm:hover:not(:disabled) { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+  .val { display: flex; align-items: baseline; justify-content: center; min-width: 56px; padding: 0 2px;
+    font-variant-numeric: tabular-nums; }
+  .val input, .val .num { font-size: 21px; font-weight: 700; text-align: center; padding: 0 2px; background: transparent;
+    border-color: transparent; color: var(--text, #e7e4dc); line-height: 1.25; }
+  .val input { width: 3ch; }
+  .val input:hover { border-color: var(--border, #2e323b); }
+  .val input:focus { border-color: var(--c); background: var(--bg, #16181d); }
+  .readonly .val { justify-content: flex-end; min-width: 72px; }
+  .val .mx { font-size: 13px; color: var(--muted, #9a958a); white-space: nowrap; margin-left: 1px; }
+  .val.full input, .val.full .num { color: var(--c); }
+  .bar { height: 5px; border-radius: 99px; margin: 7px 0 1px; background: color-mix(in srgb, var(--c) 14%, var(--bg, #16181d)); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: inherit; background: var(--c); transition: width .15s ease; }
+
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0;
+    flex-shrink: 0; color: var(--muted, #9a958a); border-color: transparent; }
+  .icon-btn:hover { color: var(--accent, #d4a953); border-color: color-mix(in srgb, var(--accent, #d4a953) 45%, transparent); }
+  .icon-btn.on { color: var(--accent, #d4a953); }
+
+  .ed { display: grid; gap: 9px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border, #2e323b); }
+  .ed-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted, #9a958a); }
+  .fld { display: flex; align-items: center; gap: 6px; }
+  .fld input { width: 84px; text-align: center; }
+  .sw { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+  .sw button { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 2px solid transparent;
+    box-shadow: inset 0 0 0 10px var(--s); }
+  .sw button.on { border-color: var(--text, #e7e4dc); box-shadow: inset 0 0 0 2px var(--panel-2, #23262e), inset 0 0 0 10px var(--s); }
+  .sw input[type=color] { width: 26px; height: 22px; padding: 0 2px; cursor: pointer; border-radius: 6px; }
+  .icons { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, 34px); gap: 5px; }
+  .icons button { width: 34px; height: 34px; padding: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted, #9a958a); border-radius: 8px; }
+  .icons button svg { width: 20px; height: 20px; }
+  .icons button.on { color: var(--c); border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+  .acts { display: flex; gap: 6px; align-items: center; }
+  .acts .del { margin-left: auto; color: var(--danger, #c0564f); }
+  .acts .del:hover { border-color: var(--danger, #c0564f); }
+  .acts .del.confirm { background: color-mix(in srgb, var(--danger, #c0564f) 18%, transparent); border-color: var(--danger, #c0564f); }
+
+  .add { display: flex; gap: 6px; align-items: center; }
+  .pill { border-radius: 999px; padding: 3px 12px; font-size: 12px; border-style: dashed; color: var(--muted, #9a958a); }
+  .pill:hover { color: var(--accent, #d4a953); }
+  .add input { max-width: 260px; }
+  @media (max-width: 380px) { .val { min-width: 44px; } .val input, .val .num { font-size: 18px; } .ico { width: 32px; height: 32px; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="list" id="list"></div>
+  <div class="add" id="add"></div>
+</div>
+<script>
+  'use strict'
+  const LIMIT = 999999
+  const PALETTE = ['#d4a953', '#e07b39', '#c0564f', '#c86a9a', '#9479d1', '#6fa8dc', '#4fb3a0', '#8db35b']
+  // Original 24px glyphs. "f" marks a translucent fill on the outline shape.
+  const ICONS = {
+    coins: '<ellipse cx="12" cy="6" rx="7" ry="2.8" class="f"/><path d="M5 6v4c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8V6M5 10v4c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8v-4M5 14v4c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8v-4"/>',
+    heart: '<path class="f" d="M12 20s-8-4.7-8-10.4A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 8 2.6C20 15.3 12 20 12 20z"/>',
+    flame: '<path class="f" d="M12 2.8c.9 3.6 6 5.6 6 11a6 6 0 0 1-12 0c0-2.8 1.5-4.6 2.9-5.7.1 2 .9 3.2 2 3.7-.6-3-.3-6.1 1.1-9z"/><path d="M12 21a2.6 2.6 0 0 1-2.6-2.6c0-1.6 1.3-2.4 2.6-4 1.3 1.6 2.6 2.4 2.6 4A2.6 2.6 0 0 1 12 21z"/>',
+    arrow: '<path d="M4 20 17 7"/><path class="s" d="M20.5 3.5 19 10l-5-5z"/><path d="M8 16 4.2 16.6M8 16l-.6 3.8M10.6 13.4l-3.8.6M10.6 13.4l-.6 3.8"/>',
+    potion: '<path d="M9.5 3h5M10.2 3v5L5.7 15.4A3.7 3.7 0 0 0 8.9 21h6.2a3.7 3.7 0 0 0 3.2-5.6L13.8 8V3"/><path class="s" d="M7.4 13.5h9.2l1.4 2.4a2.5 2.5 0 0 1-2.2 3.6H8.2A2.5 2.5 0 0 1 6 15.9z"/>',
+    droplet: '<path class="f" d="M12 3s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3z"/><path d="M9 15a3 3 0 0 0 3 3"/>',
+    star: '<path class="f" d="m12 2.8 2.8 6 6.6.8-4.9 4.5 1.3 6.5L12 17.3l-5.8 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/>',
+    bolt: '<path class="f" d="M13.5 2.5 5 13.5h6l-1 8 8.5-11h-6z"/>',
+    skull: '<path d="M12 3a8 8 0 0 0-8 8c0 2.6 1.2 4.5 3 5.6V20h10v-3.4c1.8-1.1 3-3 3-5.6a8 8 0 0 0-8-8zM10.5 20v-2.5M13.5 20v-2.5"/><circle class="s" cx="8.8" cy="11.5" r="1.9"/><circle class="s" cx="15.2" cy="11.5" r="1.9"/>',
+    shield: '<path class="f" d="M12 2.8 19.5 6v5.5c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V6z"/><path d="M12 2.8v18.4M4.5 11h15"/>',
+    gem: '<path class="f" d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9.5 4 8 9l4 11 4-11-1.5-5"/>',
+    meat: '<ellipse class="f" cx="14.6" cy="9.4" rx="6.6" ry="5" transform="rotate(-45 14.6 9.4)"/><path d="M10.4 13.6 6.4 17.6M13.4 7.2c1.1-.6 2.3-.5 3.3.3"/><circle cx="4.9" cy="17.3" r="1.7"/><circle cx="6.7" cy="19.1" r="1.7"/>',
+    scroll: '<path d="M6 17V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1.5h-4M16 6v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1h10"/><path d="M9 9h4M9 12.5h4"/>',
+    dice: '<rect class="f" x="3.5" y="3.5" width="17" height="17" rx="3.5"/><circle class="s" cx="8.3" cy="8.3" r="1.4"/><circle class="s" cx="15.7" cy="8.3" r="1.4"/><circle class="s" cx="12" cy="12" r="1.4"/><circle class="s" cx="8.3" cy="15.7" r="1.4"/><circle class="s" cx="15.7" cy="15.7" r="1.4"/>',
+  }
+  const ICON_KEYS = Object.keys(ICONS)
+  const svg = (k) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    (ICONS[k] || ICONS.coins).replace(/class="f"/g, 'fill="currentColor" fill-opacity=".22"').replace(/class="s"/g, 'fill="currentColor"') + '</svg>'
+  const ICON_EDIT = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l.6-2.6 7.2-7.2a1.4 1.4 0 0 1 2 2l-7.2 7.2z"/><path d="M9.6 4.4l2 2"/></svg>'
+  const ICON_DONE = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>'
+  // Guess a fitting icon from a new tracker's name.
+  const GUESS = [[/gold|coin|silver|copper|money|cash|crown|wealth/i, 'coins'], [/hp|health|life|heart|vital/i, 'heart'],
+    [/arrow|bolt|quiver|ammo/i, 'arrow'], [/potion|flask|elixir|brew/i, 'potion'], [/mana|water|blood|drop/i, 'droplet'],
+    [/luck|hope|fate|star|inspir|xp|exp/i, 'star'], [/energy|power|charge|spark|stamina/i, 'bolt'], [/torch|fire|flame|fuel|oil/i, 'flame'],
+    [/death|kill|doom|skull|corrupt/i, 'skull'], [/armor|armour|shield|defen/i, 'shield'], [/gem|jewel|crystal|diamond|shard/i, 'gem'],
+    [/ration|food|meal|meat|supply|supplies/i, 'meat'], [/scroll|spell|page|note|rune/i, 'scroll'], [/die|dice|roll|chance/i, 'dice']]
+
+  const $ = (id) => document.getElementById(id)
+  const send = (msg) => window.parent.postMessage(msg, '*')
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e }
+  const newId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+
+  let state = { v: 1, trackers: [] }
+  let canEdit = false
+  let editing = new Set() // tracker ids in edit mode (transient)
+  let adding = false
+
+  // ---- normalize (migrate-safe) ----
+  const int = (v) => { const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v; return typeof n === 'number' && isFinite(n) ? Math.round(n) : null }
+  const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
+  function normColor(c, i) {
+    if (typeof c === 'string') {
+      const s = c.trim().toLowerCase()
+      if (/^#[0-9a-f]{6}$/.test(s)) return s
+      if (/^#[0-9a-f]{3}$/.test(s)) return '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]
+    }
+    return PALETTE[i % PALETTE.length]
+  }
+  function normTracker(t, i, seen) {
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return null
+    let id = typeof t.id === 'string' && t.id.trim() ? t.id.slice(0, 40) : newId()
+    while (seen.has(id)) id = newId()
+    seen.add(id)
+    const m = int(t.max)
+    const max = m != null && m >= 1 ? Math.min(m, LIMIT) : null
+    const s = int(t.step)
+    const v = int(t.value)
+    return {
+      id,
+      name: typeof t.name === 'string' ? t.name.slice(0, 80) : (typeof t.name === 'number' ? String(t.name) : 'Tracker'),
+      value: v == null ? 0 : clamp(v, 0, max == null ? LIMIT : max),
+      max,
+      step: s != null && s >= 1 ? Math.min(s, LIMIT) : 1,
+      color: normColor(t.color, i),
+      icon: typeof t.icon === 'string' && ICONS[t.icon] ? t.icon : 'coins',
+    }
+  }
+  function normalize(d) {
+    const src = d && typeof d === 'object' && Array.isArray(d.trackers) ? d.trackers : []
+    const seen = new Set()
+    const trackers = []
+    for (const t of src.slice(0, 200)) { const n = normTracker(t, trackers.length, seen); if (n) trackers.push(n) }
+    return { v: 1, trackers }
+  }
+
+  // ---- persistence (debounced) ----
+  let saveTimer
+  function save() {
+    if (!canEdit) return
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => send({ type: 'archivarius:set-data', data: state }), 300)
+  }
+
+  // ---- theme ----
+  function applyTheme(theme) {
+    if (!theme || typeof theme !== 'object') return
+    for (const [k, v] of Object.entries(theme)) {
+      if (typeof v === 'string') document.documentElement.style.setProperty('--' + k.replace(/^--/, ''), v)
+    }
+  }
+
+  // ---- value changes ----
+  const upper = (t) => (t.max == null ? LIMIT : t.max)
+  function setValue(t, v, refs) {
+    const nv = clamp(Math.round(v), 0, upper(t))
+    if (nv === t.value) return false
+    t.value = nv
+    if (refs) paint(t, refs)
+    save()
+    return true
+  }
+  function paint(t, r) {
+    const s = String(t.value)
+    if (r.input) { if (document.activeElement !== r.input) r.input.value = s; r.input.style.width = Math.max(2, s.length) + 1 + 'ch' }
+    if (r.num) r.num.textContent = s
+    r.val.classList.toggle('full', t.max != null && t.value >= t.max)
+    if (r.bar) r.bar.style.width = (t.max ? (100 * t.value / t.max) : 0) + '%'
+    if (r.minus) r.minus.disabled = t.value <= 0
+    if (r.plus) r.plus.disabled = t.value >= upper(t)
+  }
+  // Click once, or hold to repeat (accelerating).
+  function holdButton(btn, fn) {
+    let timer = null, n = 0
+    const stop = () => { clearTimeout(timer); timer = null }
+    const tick = () => { if (!fn()) return stop(); n++; timer = setTimeout(tick, n < 6 ? 140 : n < 20 ? 70 : 35) }
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return
+      e.preventDefault(); stop(); n = 0
+      if (fn()) timer = setTimeout(tick, 420)
+    })
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel', 'blur']) btn.addEventListener(ev, stop)
+    btn.addEventListener('click', (e) => { if (e.detail === 0) fn() }) // keyboard activation
+    btn.addEventListener('contextmenu', (e) => e.preventDefault())
+  }
+
+  // ---- render ----
+  function iconButton(cls, html, title, onClick) {
+    const b = el('button', 'icon-btn ' + cls, html)
+    b.type = 'button'; b.title = title; b.setAttribute('aria-label', title)
+    b.addEventListener('click', onClick)
+    return b
+  }
+  function render() {
+    $('wrap').classList.toggle('readonly', !canEdit)
+    const list = $('list')
+    list.innerHTML = ''
+    if (!state.trackers.length) {
+      list.appendChild(el('div', 'empty', canEdit ? 'No trackers yet. Add one to start counting.' : 'No trackers.'))
+    }
+    state.trackers.forEach((t, i) => list.appendChild(renderTracker(t, i)))
+    renderAdd()
+  }
+  function renderTracker(t, i) {
+    const card = el('div', 'tr' + (canEdit && editing.has(t.id) ? ' editing' : ''))
+    card.style.setProperty('--c', t.color)
+    card.dataset.id = t.id
+    const row = el('div', 'row')
+    const ico = el('div', 'ico', svg(t.icon))
+    const nm = el('div', 'nm')
+    if (canEdit) {
+      const name = el('input'); name.value = t.name; name.placeholder = 'Name'; name.maxLength = 80
+      name.setAttribute('aria-label', 'Tracker name')
+      name.addEventListener('input', () => { t.name = name.value; save() })
+      name.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Escape') name.blur() })
+      nm.appendChild(name)
+    } else {
+      const txt = el('div', 'txt'); txt.textContent = t.name || 'Untitled'; nm.appendChild(txt)
+    }
+    if (t.step !== 1) { const sub = el('div', 'sub'); sub.textContent = 'step ' + t.step; nm.appendChild(sub) }
+
+    const refs = { val: el('div', 'val') }
+    if (canEdit) {
+      const inp = el('input'); inp.type = 'number'; inp.min = '0'; inp.max = String(upper(t)); inp.step = String(t.step)
+      inp.inputMode = 'numeric'; inp.setAttribute('aria-label', 'Current amount')
+      inp.addEventListener('change', () => {
+        const v = int(inp.value)
+        if (v == null || !setValue(t, v, refs)) { inp.value = String(t.value); paint(t, refs) }
+      })
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') inp.blur()
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); setValue(t, t.value + (e.key === 'ArrowUp' ? t.step : -t.step), refs); inp.value = String(t.value) }
+      })
+      inp.addEventListener('focus', () => inp.select())
+      refs.input = inp; refs.val.appendChild(inp)
+    } else {
+      refs.num = el('span', 'num'); refs.val.appendChild(refs.num)
+    }
+    if (t.max != null) { const mx = el('span', 'mx'); mx.textContent = '/ ' + t.max; refs.val.appendChild(mx) }
+
+    const cnt = el('div', 'cnt')
+    if (canEdit) {
+      refs.minus = el('button', 'pm', '−'); refs.minus.type = 'button'; refs.minus.title = 'Decrease by ' + t.step
+      refs.plus = el('button', 'pm', '+'); refs.plus.type = 'button'; refs.plus.title = 'Increase by ' + t.step
+      holdButton(refs.minus, () => setValue(t, t.value - t.step, refs))
+      holdButton(refs.plus, () => setValue(t, t.value + t.step, refs))
+      cnt.append(refs.minus, refs.val, refs.plus)
+    } else cnt.append(refs.val)
+
+    row.append(ico, nm, cnt)
+    if (canEdit) {
+      const on = editing.has(t.id)
+      row.appendChild(iconButton('edit-btn' + (on ? ' on' : ''), on ? ICON_DONE : ICON_EDIT, on ? 'Done editing' : 'Edit tracker', () => {
+        if (on) editing.delete(t.id); else editing.add(t.id)
+        render()
+      }))
+    }
+    card.appendChild(row)
+    if (t.max != null) {
+      const bar = el('div', 'bar'); refs.bar = el('i'); bar.appendChild(refs.bar); card.appendChild(bar)
+    }
+    paint(t, refs)
+    if (canEdit && editing.has(t.id)) card.appendChild(renderEditor(t, i, card))
+    return card
+  }
+  function numField(label, value, placeholder, onChange) {
+    const f = el('label', 'fld'); const l = el('span', 'lbl'); l.textContent = label
+    const inp = el('input'); inp.type = 'number'; inp.min = '1'; inp.max = String(LIMIT); inp.placeholder = placeholder
+    inp.value = value == null ? '' : String(value)
+    inp.addEventListener('change', () => onChange(inp))
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur() })
+    f.append(l, inp)
+    return f
+  }
+  function renderEditor(t, i, card) {
+    const ed = el('div', 'ed')
+    const r1 = el('div', 'ed-row')
+    r1.append(
+      numField('Max', t.max, 'none', (inp) => {
+        const m = int(inp.value)
+        t.max = m != null && m >= 1 ? Math.min(m, LIMIT) : null
+        t.value = clamp(t.value, 0, upper(t))
+        save(); render()
+      }),
+      numField('Step', t.step, '1', (inp) => {
+        const s = int(inp.value)
+        t.step = s != null && s >= 1 ? Math.min(s, LIMIT) : 1
+        save(); render()
+      }))
+    ed.appendChild(r1)
+
+    const r2 = el('div', 'ed-row'); const cl = el('span', 'lbl'); cl.textContent = 'Color'
+    const sw = el('div', 'sw')
+    for (const c of PALETTE) {
+      const b = el('button', c === t.color ? 'on' : ''); b.type = 'button'; b.title = c; b.setAttribute('aria-label', 'Color ' + c)
+      b.style.setProperty('--s', c)
+      b.addEventListener('click', () => { t.color = c; save(); render() })
+      sw.appendChild(b)
+    }
+    const pick = el('input'); pick.type = 'color'; pick.value = t.color; pick.title = 'Custom color'
+    pick.addEventListener('input', () => { t.color = normColor(pick.value, i); card.style.setProperty('--c', t.color); sw.querySelectorAll('button').forEach((b) => b.classList.remove('on')); save() })
+    pick.addEventListener('change', () => render())
+    sw.appendChild(pick)
+    r2.append(cl, sw); ed.appendChild(r2)
+
+    const r3 = el('div', 'ed-row'); const il = el('span', 'lbl'); il.textContent = 'Icon'
+    const icons = el('div', 'icons')
+    for (const k of ICON_KEYS) {
+      const b = el('button', k === t.icon ? 'on' : '', svg(k)); b.type = 'button'; b.title = k; b.setAttribute('aria-label', 'Icon ' + k)
+      b.addEventListener('click', () => { t.icon = k; save(); render() })
+      icons.appendChild(b)
+    }
+    r3.append(il, icons); ed.appendChild(r3)
+
+    const acts = el('div', 'acts')
+    const move = (d) => () => {
+      const j = i + d; if (j < 0 || j >= state.trackers.length) return
+      const a = state.trackers; [a[i], a[j]] = [a[j], a[i]]; save(); render()
+    }
+    const up = el('button', '', '↑ Up'); up.type = 'button'; up.disabled = i === 0; up.addEventListener('click', move(-1))
+    const down = el('button', '', '↓ Down'); down.type = 'button'; down.disabled = i === state.trackers.length - 1; down.addEventListener('click', move(1))
+    const del = el('button', 'del', 'Delete'); del.type = 'button'
+    let armed = null
+    del.addEventListener('click', () => {
+      if (!armed) {
+        del.classList.add('confirm'); del.textContent = 'Click again to delete'
+        armed = setTimeout(() => { armed = null; del.classList.remove('confirm'); del.textContent = 'Delete' }, 3000)
+        return
+      }
+      clearTimeout(armed)
+      state.trackers = state.trackers.filter((x) => x !== t); editing.delete(t.id); save(); render()
+    })
+    acts.append(up, down, del); ed.appendChild(acts)
+    return ed
+  }
+  function renderAdd() {
+    const box = $('add')
+    box.innerHTML = ''
+    if (!canEdit) { box.style.display = 'none'; return }
+    box.style.display = ''
+    if (!adding) {
+      const pill = el('button', 'pill', '+ Add tracker'); pill.type = 'button'
+      pill.addEventListener('click', () => { adding = true; renderAdd(); const i = box.querySelector('input'); if (i) i.focus() })
+      box.appendChild(pill)
+      return
+    }
+    const inp = el('input'); inp.placeholder = 'Tracker name, e.g. Gold'; inp.maxLength = 80; inp.setAttribute('aria-label', 'New tracker name')
+    const ok = el('button', '', 'Add'); ok.type = 'button'
+    const cancel = iconButton('', '×', 'Cancel', () => { adding = false; renderAdd() })
+    const commit = () => {
+      const name = inp.value.trim()
+      if (!name) { inp.focus(); return }
+      const g = GUESS.find(([re]) => re.test(name))
+      state.trackers.push({ id: newId(), name, value: 0, max: null, step: 1,
+        color: PALETTE[state.trackers.length % PALETTE.length], icon: g ? g[1] : 'coins' })
+      adding = false; save(); render()
+      const pill = box.querySelector('button'); if (pill) pill.focus()
+    }
+    ok.addEventListener('click', commit)
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') commit(); else if (e.key === 'Escape') { adding = false; renderAdd() } })
+    box.append(inp, ok, cancel)
+  }
+
+  // ---- sizing ----
+  let lastH = 0
+  function reportSize() {
+    const h = Math.ceil(document.body.getBoundingClientRect().height)
+    if (h !== lastH) { lastH = h; send({ type: 'archivarius:resize', height: h }) }
+  }
+  new ResizeObserver(reportSize).observe(document.body)
+
+  // ---- bridge ----
+  window.addEventListener('message', (e) => {
+    const msg = e.data
+    if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return
+    if (!msg.type.startsWith('archivarius:')) return
+    if (msg.type === 'archivarius:init') {
+      canEdit = msg.canEdit === true
+      applyTheme(msg.theme)
+      state = normalize(msg.data)
+      const ids = new Set(state.trackers.map((t) => t.id))
+      editing = new Set([...editing].filter((id) => ids.has(id)))
+      if (!canEdit) adding = false
+      render()
+      lastH = 0; reportSize()
+    }
+  })
+  render()
+  send({ type: 'archivarius:ready' })
+</script>
+</body>
+</html>
