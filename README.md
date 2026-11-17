@@ -1,9 +1,8 @@
 # Archivarius Plugins
 
-The free, community plugin registry for **[Archivarius](https://github.com/FieryBeaver/Archivarius)**, a worldbuilding app.
+The free, community plugin registry for **[Archivarius](https://github.com/FieryBeaver/Archivarius)**, an open-source worldbuilding app that anyone can self-host. This registry works with any Archivarius instance.
 
-- **App:** https://archivarius.pages.dev
-- **App source:** https://github.com/FieryBeaver/Archivarius
+- **Archivarius source:** https://github.com/FieryBeaver/Archivarius
 - **Plugin author guide:** [PLUGINS.md](https://github.com/FieryBeaver/Archivarius/blob/main/PLUGINS.md)
 
 Every plugin here is free and open-licensed.
