@@ -41,3 +41,18 @@ file, when a file is over 256 KB or doesn't start with `<!doctype html>`, or
 when `index.json` is stale. A maintainer then reads the plugin code before
 merging. Plugins that phone home, obfuscate code, or aren't freely licensed
 won't be merged.
+
+## After merge
+
+Archivarius reads the catalog through jsDelivr, which can keep serving the
+previous `index.json` for up to about 12 hours. Once a new or updated plugin is
+on `main`, a maintainer purges the CDN cache so the market shows it right away:
+
+```sh
+curl -s https://purge.jsdelivr.net/gh/FieryBeaver/Archivarius-Plugins@main/index.json
+curl -s https://purge.jsdelivr.net/gh/FieryBeaver/Archivarius-Plugins@main/plugins/<slug>/plugin.html
+```
+
+This is optional. Without it the catalog catches up when the CDN cache expires.
+The app only falls back to raw.githubusercontent.com when the jsDelivr request
+fails, not when jsDelivr returns an older copy.

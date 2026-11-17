@@ -105,6 +105,8 @@ directory of the `index.json` URL. With the URL above,
 `https://raw.githubusercontent.com/FieryBeaver/Archivarius-Plugins/main/plugins/daggerheart-sheet/plugin.html`.
 A CDN mirror works too, for example
 `https://cdn.jsdelivr.net/gh/FieryBeaver/Archivarius-Plugins@main/index.json`.
+Archivarius reads the jsDelivr URL first, so after a merge maintainers purge its
+cache (see [After merge](CONTRIBUTING.md#after-merge)).
 
 ```json
 {
